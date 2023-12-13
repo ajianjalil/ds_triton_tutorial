@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  ds_service_triton:
+    container_name: ds
+    build:
+      context: .
+      args:
+        - NODE_ENV=local
+      dockerfile: Dockerfile
+    network_mode: "host"
+    runtime: nvidia
+    volumes:
+      - "./deepstream_python_apps:/opt/nvidia/deepstream/deepstream-6.3/sources/deepstream_python_apps"
+      - "/tmp/.X11-unix:/tmp/.X11-unix:rw"
+      - "//var/run/docker.sock://var/run/docker.sock"
+      - "/etc/localtime:/etc/localtime:ro"
+    environment:
+      - DISPLAY=$DISPLAY
+      - QT_X11_NO_MITSHM=1
+      - ENABLE_ALERTS=TRUE
+      - PRINT_OUT=FALSE
+      - ROOT_DIR=/workspace/SP2023/
+      # - GST_DEBUG=1
+      # - GST_DEBUG_LEVEL=3
+    restart: always
+    # command: ["deepstream_python_apps/apps/deepstream-demux-multi-in-multi-out/deepstream_demux_multi_in_multi_out.py","-i", "file:///opt/nvidia/deepstream/deepstream-5.1/workspace/1.mp4"]
+    command: ["deepstream_python_apps/apps/deepstream-test2/deepstream_test_2.py", "file:///opt/nvidia/deepstream/deepstream-5.1/workspace/1.mp4"]
+    entrypoint: ["python3", "-u"]
+    
+
+  rtsp_server:
+    container_name: rtsp_forward_ds
+    image: bluenviron/mediamtx:1.0.2
+    network_mode: "host"
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml
+    restart: always
+
+  autoheal:
+    restart: always
+    image: willfarrell/autoheal
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    
+
+    
