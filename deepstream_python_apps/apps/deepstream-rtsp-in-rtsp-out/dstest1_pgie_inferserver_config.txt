@@ -24,7 +24,7 @@ infer_config {
       model_name: "ssd_inception_v2_coco_2018_01_28"
       version: -1
       model_repo {
-        root: "../../../../samples/trtis_model_repo"
+        root: "../../trtis_model_repo"
         log_level: 2
         tf_gpu_memory_fraction: 0.4
         tf_disable_soft_placement: 0
@@ -43,7 +43,7 @@ infer_config {
   }
 
   postprocess {
-    labelfile_path: "../../../../samples/trtis_model_repo/ssd_inception_v2_coco_2018_01_28/labels.txt"
+    labelfile_path: "../../trtis_model_repo/ssd_inception_v2_coco_2018_01_28/labels.txt"
     detection {
       num_detected_classes: 91
       custom_parse_bbox_func: "NvDsInferParseCustomTfSSD"

@@ -27,4 +27,6 @@ RUN apt-get install 'ffmpeg'\
 RUN apt-get install -y libgirepository1.0-dev \
     gobject-introspection gir1.2-gst-rtsp-server-1.0 \
     python3-numpy python3-opencv
-WORKDIR /opt/nvidia/deepstream/deepstream-6.3/
+
+RUN python3 -m pip install pyds_ext
+WORKDIR /opt/nvidia/deepstream/deepstream-6.3/sources/deepstream_python_apps/apps/deepstream-rtsp-in-rtsp-out/
