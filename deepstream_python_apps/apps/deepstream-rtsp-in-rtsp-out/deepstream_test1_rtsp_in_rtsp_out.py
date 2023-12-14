@@ -78,10 +78,10 @@ def pgie_src_pad_buffer_probe(pad, info, u_data):
             break
 
         frame_number = frame_meta.frame_num
-        print(
-            "Frame Number=",
-            frame_number
-        )
+        # print(
+        #     "Frame Number=",
+        #     frame_number
+        # )
         if ts_from_rtsp:
             ts = frame_meta.ntp_timestamp/1000000000 # Retrieve timestamp, put decimal in proper position for Unix format
             print("RTSP Timestamp:",datetime.datetime.utcfromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')) # Convert timestamp to UTC
@@ -174,6 +174,7 @@ def create_source_bin(index, uri):
 def main(args):
     # Check input arguments
     number_sources = len(args)
+    print(f"number of sources = {number_sources}")
 
     # Standard GStreamer initialization
     Gst.init(None)
@@ -402,6 +403,8 @@ def parse_args():
     bitrate = args.bitrate
     stream_path = args.input
     ts_from_rtsp = args.rtsp_ts
+    print(f"Stream path is {stream_path}")
+    stream_path = ['file:///opt/nvidia/deepstream/deepstream-6.3/samples/streams/sample_1080p_h264.mp4']
     return stream_path
 
 if __name__ == '__main__':
