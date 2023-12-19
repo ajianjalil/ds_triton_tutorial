@@ -24,7 +24,7 @@ infer_config {
   backend {
     inputs [
       {
-        name: "input.1"
+        name: "INPUT0"
         dims: [3, 480, 640]
       }
     ]

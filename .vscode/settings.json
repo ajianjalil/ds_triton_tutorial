@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.pyx": "cython",
+        "deque": "cpp",
+        "string": "cpp",
+        "vector": "cpp"
+    }
+}
