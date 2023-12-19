@@ -136,114 +136,39 @@ static std::vector<int> getIds(float *heatmap, int h, int w, float thresh)
 
 /* customcenternetface */
 extern "C" bool NvDsInferParseCustomCenterNetFace(std::vector<NvDsInferLayerInfo> const &outputLayersInfo,
-												  NvDsInferNetworkInfo const &networkInfo,
-												  NvDsInferParseDetectionParams const &detectionParams,
-												  std::vector<NvDsInferObjectDetectionInfo> &objectList)
+                                                  NvDsInferNetworkInfo const &networkInfo,
+                                                  NvDsInferParseDetectionParams const &detectionParams,
+                                                  std::vector<NvDsInferObjectDetectionInfo> &objectList)
 {
-	auto layerFinder = [&outputLayersInfo](const std::string &name)
-		-> const NvDsInferLayerInfo * {
-		for (auto &layer : outputLayersInfo)
-		{
+    // Clear the object list
+    objectList.clear();
 
-			if (layer.dataType == FLOAT &&
-				(layer.layerName && name == layer.layerName))
-			{
-				return &layer;
-			}
-		}
-		return nullptr;
-	};
-	objectList.clear();
-	const NvDsInferLayerInfo *heatmap = layerFinder("537");
-	const NvDsInferLayerInfo *scale = layerFinder("538");
-	const NvDsInferLayerInfo *offset = layerFinder("539");
-	const NvDsInferLayerInfo *landmarks = layerFinder("540");
-	//    std::cout<<"width"<<&networkInfo.width<<std::endl;
+    // Create a constant face rectangle with fixed coordinates
+    NvDsInferObjectDetectionInfo object;
 
-	if (!heatmap || !scale || !offset || !landmarks)
-	{
-		std::cerr << "ERROR: some layers missing or unsupported data types "
-				  << "in output tensors" << std::endl;
-		return false;
-	}
+    // Set fixed coordinates (200 * 200)
+    object.left = 200;
+    object.top = 200;
+    object.width = 200;
+    object.height = 200;
 
-	int fea_h = heatmap->inferDims.d[1]; //#heatmap.size[2];
-	int fea_w = heatmap->inferDims.d[2]; //heatmap.size[3];
-	int spacial_size = fea_w * fea_h;
-	//	std::cout<<"features"<<fea_h<<"width"<<fea_w<<std::endl;
-	float *heatmap_ = (float *)(heatmap->buffer);
+    // Clip object box coordinates to network resolution
+    object.left = CLIP(object.left, 0, networkInfo.width - 1);
+    object.top = CLIP(object.top, 0, networkInfo.height - 1);
+    object.width = CLIP(object.width, 0, networkInfo.width - 1);
+    object.height = CLIP(object.height, 0, networkInfo.height - 1);
 
-	float *scale0 = (float *)(scale->buffer);
-	float *scale1 = scale0 + spacial_size;
+    // Set other detection parameters
+    object.detectionConfidence = 0.99;
+    object.classId = 0;
 
-	float *offset0 = (float *)(offset->buffer);
-	float *offset1 = offset0 + spacial_size;
-	float *lm = (float *)landmarks->buffer;
+    // Add the constant face rectangle to the object list
+    objectList.push_back(object);
 
-	float scoreThresh = 0.5;
-	std::vector<int> ids = getIds(heatmap_, fea_h, fea_w, scoreThresh);
-	//?? d_w, d_h
-	int width = networkInfo.width;
-	int height = networkInfo.height;
-	int d_h = (int)(std::ceil(height / 32) * 32);
-	int d_w = (int)(std::ceil(width / 32) * 32);
-	//	int d_scale_h = height/d_h ;
-	//	int d_scale_w = width/d_w ;
-	//	float scale_w = (float)width / (float)d_w;
-	//	float scale_h = (float)height / (float)d_h;
-	std::vector<FaceInfo> faces_tmp;
-	std::vector<FaceInfo> faces;
-	for (int i = 0; i < ids.size() / 2; i++)
-	{
-		int id_h = ids[2 * i];
-		int id_w = ids[2 * i + 1];
-		int index = id_h * fea_w + id_w;
-
-		float s0 = std::exp(scale0[index]) * 4;
-		float s1 = std::exp(scale1[index]) * 4;
-		float o0 = offset0[index];
-		float o1 = offset1[index];
-		float x1 = std::max(0., (id_w + o1 + 0.5) * 4 - s1 / 2);
-		float y1 = std::max(0., (id_h + o0 + 0.5) * 4 - s0 / 2);
-		float x2 = 0, y2 = 0;
-		x1 = std::min(x1, (float)d_w);
-		y1 = std::min(y1, (float)d_h);
-		x2 = std::min(x1 + s1, (float)d_w);
-		y2 = std::min(y1 + s0, (float)d_h);
-
-		FaceInfo facebox;
-		facebox.x1 = x1;
-		facebox.y1 = y1;
-		facebox.x2 = x2;
-		facebox.y2 = y2;
-		facebox.score = heatmap_[index];
-		for (int j = 0; j < 5; j++)
-		{
-			facebox.landmarks[2 * j] = x1 + lm[(2 * j + 1) * spacial_size + index] * s1;
-			facebox.landmarks[2 * j + 1] = y1 + lm[(2 * j) * spacial_size + index] * s0;
-		}
-		faces_tmp.push_back(facebox);
-	}
-
-	const float threshold = 0.3;
-	nms(faces_tmp, faces, threshold);
-	for (int k = 0; k < faces.size(); k++)
-	{
-		NvDsInferObjectDetectionInfo object;
-		/* Clip object box co-ordinates to network resolution */
-		object.left = CLIP(faces[k].x1, 0, networkInfo.width - 1);
-		object.top = CLIP(faces[k].y1, 0, networkInfo.height - 1);
-		object.width = CLIP((faces[k].x2 - faces[k].x1), 0, networkInfo.width - 1);
-		object.height = CLIP((faces[k].y2 - faces[k].y1), 0, networkInfo.height - 1);
-
-		if (object.width && object.height)
-		{
-			object.detectionConfidence = 0.99;
-			object.classId = 0;
-			objectList.push_back(object);
-		}
-	}
-	return true;
+    return true;
 }
+
+
+
 /* Check that the custom function has been defined correctly */
 CHECK_CUSTOM_PARSE_FUNC_PROTOTYPE(NvDsInferParseCustomCenterNetFace);
