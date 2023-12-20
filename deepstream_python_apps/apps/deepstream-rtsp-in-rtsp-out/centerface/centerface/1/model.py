@@ -26,7 +26,7 @@
 
 import io
 import json
-
+import cv2
 import numpy as np
 
 # triton_python_backend_utils is available in every Triton Python model. You
@@ -34,7 +34,7 @@ import numpy as np
 # contains some utility functions for extracting information from model_config
 # and converting Triton input/output types to numpy types.
 import triton_python_backend_utils as pb_utils
-
+from tensorflow.experimental.dlpack import from_dlpack
 
 class TritonPythonModel:
     """Your Python model must use the same class name. Every Python model
@@ -92,15 +92,30 @@ class TritonPythonModel:
         """
         responses = []
 
-        logger = pb_utils.Logger
-        logger.log_info("Info Msg!")
-        logger.log_warn("Warning Msg!")
-        logger.log_error("Error Msg!")
-        logger.log_verbose("Verbose Msg!")
+        # logger = pb_utils.Logger
+        # logger.log_info("Info Msg!")
+        # logger.log_warn("Warning Msg!")
+        # logger.log_error("Error Msg!")
+        # logger.log_verbose("Verbose Msg!")
         for request in requests:
             input_tensor = pb_utils.get_input_tensor_by_name(request, "INPUT0")
-            out_tensor = pb_utils.Tensor.from_dlpack(
-                "OUTPUT0", input_tensor.to_dlpack()
+            tf_tensor = from_dlpack(input_tensor.to_dlpack())
+            # print("shape={}".format(tf_tensor.shape))
+            frame = tf_tensor.numpy()
+            frame = np.squeeze(frame)
+            frame = np.transpose(frame,(1,2,0))
+            # print(frame[0, 1, 1, 1])
+            # print(f"new shape={frame.shape}")
+            threshold = cv2.threshold(frame[:,:,0],127,255,cv2.THRESH_BINARY)[1]
+            threshold = threshold.astype(np.uint8)
+            num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(threshold, connectivity=8)
+
+            # Iterate through the connected components and print their statistics
+            for i in range(1, num_labels):
+                left, top, width, height, area = stats[i]
+                # print(f"Component {i} - Left: {left}, Top: {top}, Width: {width}, Height: {height}, Area: {area}")
+            out_tensor = pb_utils.Tensor(
+                "OUTPUT0", stats
             )
             responses.append(pb_utils.InferenceResponse([out_tensor]))
         return responses

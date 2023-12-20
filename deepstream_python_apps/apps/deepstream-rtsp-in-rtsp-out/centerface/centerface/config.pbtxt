@@ -42,6 +42,6 @@ instance_group [
 parameters: {
   key: "FORCE_CPU_ONLY_INPUT_TENSORS"
   value: {
-    string_value:"no"
+    string_value:"yes"
   }
 }
