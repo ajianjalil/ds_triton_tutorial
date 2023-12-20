@@ -134,6 +134,24 @@ static std::vector<int> getIds(float *heatmap, int h, int w, float thresh)
 	return ids;
 }
 
+// Custom operator<< for NvDsInferLayerInfo
+std::ostream& operator<<(std::ostream& os, const NvDsInferLayerInfo& layerInfo) {
+    os << "Layer Info:\n";
+    os << "  DataType: " << layerInfo.dataType << "\n";
+    os << "  Infer Dims: (" << layerInfo.inferDims.numDims << " dimensions)\n";
+    for (int i = 0; i < layerInfo.inferDims.numDims; ++i) {
+        os << "    Dim " << i << ": " << layerInfo.inferDims.d[i] << "\n";
+    }
+    os << "  Binding Index: " << layerInfo.bindingIndex << "\n";
+    os << "  Layer Name: " << (layerInfo.layerName ? layerInfo.layerName : "N/A") << "\n";
+    os << "  Buffer Pointer: " << layerInfo.buffer << "\n";
+    os << "  Is Input: " << (layerInfo.isInput ? "true" : "false") << "\n";
+
+    return os;
+}
+
+
+
 /* customcenternetface */
 extern "C" bool NvDsInferParseCustomCenterNetFace(std::vector<NvDsInferLayerInfo> const &outputLayersInfo,
                                                   NvDsInferNetworkInfo const &networkInfo,
@@ -145,6 +163,10 @@ extern "C" bool NvDsInferParseCustomCenterNetFace(std::vector<NvDsInferLayerInfo
 
     // Create a constant face rectangle with fixed coordinates
     NvDsInferObjectDetectionInfo object;
+
+	for (int i = 0; i < outputLayersInfo.size(); ++i) {
+        std::cout << "Tensor Element " << i << ":\n" << outputLayersInfo[i] << std::endl;
+    }
 
     // Set fixed coordinates (200 * 200)
     object.left = 200;
