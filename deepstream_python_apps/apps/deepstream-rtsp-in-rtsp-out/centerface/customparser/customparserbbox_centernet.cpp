@@ -164,9 +164,54 @@ extern "C" bool NvDsInferParseCustomCenterNetFace(std::vector<NvDsInferLayerInfo
     // Create a constant face rectangle with fixed coordinates
     NvDsInferObjectDetectionInfo object;
 
-	for (int i = 0; i < outputLayersInfo.size(); ++i) {
-        std::cout << "Tensor Element " << i << ":\n" << outputLayersInfo[i] << std::endl;
+	// for (int i = 0; i < outputLayersInfo.size(); ++i) {
+    //     std::cout << "Tensor Element " << i << ":\n" << outputLayersInfo[i] << std::endl;
+    // }
+
+	// Assuming there is only one output layer
+    if (outputLayersInfo.size() != 1) {
+        std::cerr << "Error: Expected one output layer, but got " << outputLayersInfo.size() << std::endl;
+        return false;
     }
+
+    // Assuming the output layer is of type FLOAT
+    if (outputLayersInfo[0].dataType != FLOAT) {
+        std::cerr << "Error: Expected output layer data type FLOAT" << std::endl;
+        return false;
+    }
+
+    // Assuming the output layer has dimensions (batchSize, numChannels, height, width)
+    NvDsInferDims outputDims = outputLayersInfo[0].inferDims;
+    int batchSize = outputDims.d[0];
+    int numChannels = outputDims.d[1];
+    int height = outputDims.d[2];
+    int width = outputDims.d[3];
+
+	// std::cout << "batchSize " << batchSize << std::endl;
+	// std::cout << "numChannels " << numChannels << std::endl;
+	// std::cout << "height " << height << std::endl;
+	// std::cout << "width " << width << std::endl;
+	
+    // Assuming the statistics information is stored in the first dimension
+    float *statsData = static_cast<float *>(outputLayersInfo[0].buffer);
+
+	// std::cout << "statsData " << *statsData << std::endl;
+
+    // Assuming each statistic has five values (e.g., area, left, top, width, height)
+    int numValuesPerStat = 5;
+
+    // Process the statistics information
+	for (int i = 0; i < 1000; ++i) {
+		int startIndex = i;
+
+		// Print the statistics information
+		std::cout << "Connected Component " << i << " Statistics:" << std::endl;
+		std::cout << "  Area: " << statsData[startIndex] << std::endl;
+		std::cout << "  Left: " << statsData[startIndex + 1] << std::endl;
+		std::cout << "  Top: " << statsData[startIndex + 2] << std::endl;
+		std::cout << "  Width: " << statsData[startIndex + 3] << std::endl;
+		std::cout << "  Height: " << statsData[startIndex + 4] << std::endl;
+	}
 
     // Set fixed coordinates (200 * 200)
     object.left = 200;

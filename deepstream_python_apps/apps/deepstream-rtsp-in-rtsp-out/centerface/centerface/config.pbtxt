@@ -20,7 +20,7 @@ input [
   {
     name: "INPUT0"
     data_type: TYPE_FP32
-    dims: [ 3,480,640 ]
+    dims: [ 3,1080,1920 ]
   }
 ]
 
@@ -31,6 +31,14 @@ output [
     dims: [ -1 ]
   }
 ]
+output [
+  {
+    name: "OUTPUT1"
+    data_type: TYPE_FP32
+    dims: [ -1 ]
+  }
+]
+
 
 instance_group [
   {
