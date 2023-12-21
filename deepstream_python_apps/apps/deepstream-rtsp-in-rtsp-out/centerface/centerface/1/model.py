@@ -34,7 +34,6 @@ import numpy as np
 # contains some utility functions for extracting information from model_config
 # and converting Triton input/output types to numpy types.
 import triton_python_backend_utils as pb_utils
-from tensorflow.experimental.dlpack import from_dlpack
 
 class TritonPythonModel:
     """Your Python model must use the same class name. Every Python model
@@ -99,9 +98,13 @@ class TritonPythonModel:
         # logger.log_verbose("Verbose Msg!")
         for request in requests:
             input_tensor = pb_utils.get_input_tensor_by_name(request, "INPUT0")
-            tf_tensor = from_dlpack(input_tensor.to_dlpack())
-            # print("shape={}".format(tf_tensor.shape))
-            frame = tf_tensor.numpy()
+            # tf_tensor = from_dlpack(input_tensor.to_dlpack())
+            # # print("shape={}".format(tf_tensor.shape))
+            # frame = tf_tensor.numpy()
+            # frame = np.frombuffer(input_tensor.as_numpy().tobytes(), dtype=input_tensor.as_numpy_dtype())
+            frame = input_tensor.as_numpy()
+            # frame = np.random.randint(0, 256, (1920, 1080, 3), dtype=np.uint8)
+
             frame = np.squeeze(frame)
             frame = np.transpose(frame,(1,2,0))
             # print(frame[0, 1, 1, 1])
