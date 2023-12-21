@@ -109,15 +109,26 @@ class TritonPythonModel:
             threshold = cv2.threshold(frame[:,:,0],127,255,cv2.THRESH_BINARY)[1]
             threshold = threshold.astype(np.uint8)
             num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(threshold, connectivity=8)
-
+            # print(f"shape0={stats.shape[0]},shape1={stats.shape[1]}")
+            stats = stats.astype(np.float32)
+            number_of_items = int(stats.shape[0])
+            # print(stats)
+            # shape = np.array([number_of_items])
+            shape = np.array([number_of_items,5])
+            shape = shape.astype(np.float32)
+            # print(shape.dtype)
             # Iterate through the connected components and print their statistics
-            for i in range(1, num_labels):
-                left, top, width, height, area = stats[i]
+            # for i in range(1, num_labels):
+            #     left, top, width, height, area = stats[i]
+                # print(f"shape={stats.shape}")
                 # print(f"Component {i} - Left: {left}, Top: {top}, Width: {width}, Height: {height}, Area: {area}")
-            out_tensor = pb_utils.Tensor(
+            out_tensor_0 = pb_utils.Tensor(
                 "OUTPUT0", stats
             )
-            responses.append(pb_utils.InferenceResponse([out_tensor]))
+            out_tensor_1 = pb_utils.Tensor(
+                "OUTPUT1", shape
+            )
+            responses.append(pb_utils.InferenceResponse([out_tensor_0,out_tensor_1]))
         return responses
 
     def finalize(self):

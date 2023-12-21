@@ -25,7 +25,7 @@ infer_config {
     inputs [
       {
         name: "INPUT0"
-        dims: [3, 480, 640]
+        dims: [3, 1080, 1920]
       }
     ]
     trt_is {
@@ -52,13 +52,7 @@ infer_config {
 
   postprocess {
     labelfile_path: "./centerface/centerface/centerface_labels.txt"
-    detection {
-      num_detected_classes: 1
-      custom_parse_bbox_func: "NvDsInferParseCustomCenterNetFace"
-      simple_cluster {
-        threshold: 0.3
-      }
-    }
+    other{}
   }
 
   custom_lib {
@@ -72,4 +66,8 @@ infer_config {
 input_control {
   process_mode: PROCESS_MODE_FULL_FRAME
   interval: 0
+}
+
+output_control {
+  output_tensor_meta: true
 }
