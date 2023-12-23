@@ -627,8 +627,8 @@ def parse_args():
     stream_path = args.input
     ts_from_rtsp = args.rtsp_ts
     print(f"Stream path is {stream_path}")
-    stream_path = ['file:///opt/nvidia/deepstream/deepstream-6.3/samples/streams/sample_1080p_h264.mp4']
-    stream_path = ['file:///opt/nvidia/deepstream/deepstream-6.3/sources/deepstream_python_apps/2.mp4']
+    # stream_path = ['file:///opt/nvidia/deepstream/deepstream-6.3/samples/streams/sample_1080p_h264.mp4']
+    stream_path = ['file:///opt/nvidia/deepstream/deepstream-6.3/sources/deepstream_python_apps/2.mp4','file:///opt/nvidia/deepstream/deepstream-6.3/sources/deepstream_python_apps/2.mp4']
     return stream_path
 
 if __name__ == '__main__':

@@ -91,21 +91,24 @@ class TritonPythonModel:
         """
         responses = []
 
-        # logger = pb_utils.Logger
+        logger = pb_utils.Logger
         # logger.log_info("Info Msg!")
         # logger.log_warn("Warning Msg!")
         # logger.log_error("Error Msg!")
         # logger.log_verbose("Verbose Msg!")
+        logger.log_info(f"Lengths of requests={len(requests)}")
         for request in requests:
             input_tensor = pb_utils.get_input_tensor_by_name(request, "INPUT0")
             # tf_tensor = from_dlpack(input_tensor.to_dlpack())
             # # print("shape={}".format(tf_tensor.shape))
             # frame = tf_tensor.numpy()
             # frame = np.frombuffer(input_tensor.as_numpy().tobytes(), dtype=input_tensor.as_numpy_dtype())
-            frame = input_tensor.as_numpy()
-            # frame = np.random.randint(0, 256, (1920, 1080, 3), dtype=np.uint8)
+            # frame = input_tensor.as_numpy()
+            frame = np.random.randint(100, 150, (1080, 1920, 3), dtype=np.uint8)
+            
+            # print(frame.shape)
 
-            frame = np.squeeze(frame)
+            frame = np.squeeze(frame)    ## twmporary adjsutment
             frame = np.transpose(frame,(1,2,0))
             # print(frame[0, 1, 1, 1])
             # print(f"new shape={frame.shape}")

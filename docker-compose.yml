@@ -31,21 +31,21 @@ services:
     entrypoint: ["python3", "-u"]
     
 
-  rtsp_server:
-    container_name: rtsp_forward_ds
-    image: bluenviron/mediamtx:1.0.2
-    network_mode: "host"
-    volumes:
-      - ./mediamtx.yml:/mediamtx.yml
-    # restart: always
+  # rtsp_server:
+  #   container_name: rtsp_forward_ds
+  #   image: bluenviron/mediamtx:1.0.2
+  #   network_mode: "host"
+  #   volumes:
+  #     - ./mediamtx.yml:/mediamtx.yml
+  #   # restart: always
 
-  autoheal:
-    # restart: always
-    image: willfarrell/autoheal
-    environment:
-      - AUTOHEAL_CONTAINER_LABEL=all
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+  # autoheal:
+  #   # restart: always
+  #   image: willfarrell/autoheal
+  #   environment:
+  #     - AUTOHEAL_CONTAINER_LABEL=all
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
     
 
     

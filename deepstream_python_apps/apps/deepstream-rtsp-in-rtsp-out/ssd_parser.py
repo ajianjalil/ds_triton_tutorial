@@ -76,6 +76,9 @@ def layer_finder(output_layer_info, name):
     """
     for layer in output_layer_info:
         # dataType == 0 <=> dataType == FLOAT
+        # print(dir(layer))
+        # print(layer.dims.d)
+        # print(layer.layerName)
         if layer.dataType == 0 and layer.layerName == name:
             return layer
     return None
@@ -149,31 +152,34 @@ def nvds_infer_parse_custom_tf_ssd(output_layer_info, detection_param, box_size_
         dimension0 = int(Data[0])
         dimension1 = int(Data[1])
         stats = layer_finder(output_layer_info, "OUTPUT0")
-        if stats.buffer:
-            # Get the shape data from the buffer
-            Ptr = ctypes.cast( pyds.get_ptr(stats.buffer), ctypes.POINTER(ctypes.c_float) )
-            stats_rects = np.ctypeslib.as_array(Ptr, shape=( [dimension0,dimension1] ) )
-            object_list = []
-            for i in stats_rects:  # Skip the background component (index 0)
-                res = pyds.NvDsInferObjectDetectionInfo()
+        object_list = []
+        if stats:
+            if stats.buffer:
+                # Get the shape data from the buffer
+                Ptr = ctypes.cast( pyds.get_ptr(stats.buffer), ctypes.POINTER(ctypes.c_float) )
+                stats_rects = np.ctypeslib.as_array(Ptr, shape=( [dimension0,dimension1] ) )
+                # print(f"stats_rects={stats_rects}")
+                
+                for i in stats_rects:  # Skip the background component (index 0)
+                    res = pyds.NvDsInferObjectDetectionInfo()
 
-                # Extract bounding box information from stats
-                rect_x1 = i[cv2.CC_STAT_LEFT]
-                rect_y1 = i[cv2.CC_STAT_TOP]
-                rect_width = i[cv2.CC_STAT_WIDTH]
-                rect_height = i[cv2.CC_STAT_HEIGHT]
+                    # Extract bounding box information from stats
+                    rect_x1 = i[cv2.CC_STAT_LEFT]
+                    rect_y1 = i[cv2.CC_STAT_TOP]
+                    rect_width = i[cv2.CC_STAT_WIDTH]
+                    rect_height = i[cv2.CC_STAT_HEIGHT]
 
-                # rect_x2 = rect_x1 + rect_width
-                # rect_y2 = rect_y1 + rect_height
+                    # rect_x2 = rect_x1 + rect_width
+                    # rect_y2 = rect_y1 + rect_height
 
-                # Fill NvDsInferObjectDetectionInfo
-                res.left = int(rect_x1)
-                res.top = int(rect_y1)
-                res.width = int(rect_width)
-                res.height = int(rect_height)
-                # print(res.width)
+                    # Fill NvDsInferObjectDetectionInfo
+                    res.left = int(rect_x1)
+                    res.top = int(rect_y1)
+                    res.width = int(rect_width)
+                    res.height = int(rect_height)
+                    # print(res.width)
 
-                object_list.append(res)
+                    object_list.append(res)
 
     # print(len(object_list))
     return object_list
