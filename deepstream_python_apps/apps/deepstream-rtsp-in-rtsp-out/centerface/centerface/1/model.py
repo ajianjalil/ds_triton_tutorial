@@ -98,6 +98,8 @@ class TritonPythonModel:
         # logger.log_verbose("Verbose Msg!")
         logger.log_info(f"Lengths of requests={len(requests)}")
         for request in requests:
+
+            """
             input_tensor = pb_utils.get_input_tensor_by_name(request, "INPUT0")
             # tf_tensor = from_dlpack(input_tensor.to_dlpack())
             # # print("shape={}".format(tf_tensor.shape))
@@ -115,7 +117,15 @@ class TritonPythonModel:
             threshold = cv2.threshold(frame[:,:,0],127,255,cv2.THRESH_BINARY)[1]
             threshold = threshold.astype(np.uint8)
             num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(threshold, connectivity=8)
+            """
             # print(f"shape0={stats.shape[0]},shape1={stats.shape[1]}")
+            # print(stats)
+            stats = np.array([
+    [10, 10, 200, 200, 3],           # Top-left corner
+    [1700, 10, 200, 200, 3],        # Top-right cornerorner
+    [10, 860, 200, 200, 50],   # Bottom-right corner
+    [1700, 860, 200, 200, 100]   # Middle
+])
             stats = stats.astype(np.float32)
             number_of_items = int(stats.shape[0])
             # print(stats)
