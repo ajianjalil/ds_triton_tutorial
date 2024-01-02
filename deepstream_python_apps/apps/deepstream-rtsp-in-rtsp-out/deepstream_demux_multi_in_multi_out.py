@@ -507,6 +507,8 @@ def parse_args():
     stream_paths = ["rtsp://192.168.1.9:8555/video1"] # ,'file:///opt/nvidia/deepstream/deepstream-6.3/sources/deepstream_python_apps/2.mp4'
     # stream_paths = ["file:///opt/nvidia/deepstream/deepstream-5.1/workspace/1.mp4","file:///opt/nvidia/deepstream/deepstream-5.1/workspace/2.mp4"]
                     # "file:///opt/nvidia/deepstream/deepstream-5.1/workspace/2.mp4"]  # rtsp://192.168.1.4:8555/video
+    stream_paths = ['file:///opt/nvidia/deepstream/deepstream-6.3/samples/streams/sample_1080p_h264.mp4']
+    stream_paths = ['rtsp://192.168.1.13:8555/video1']
     return stream_paths
 
 
