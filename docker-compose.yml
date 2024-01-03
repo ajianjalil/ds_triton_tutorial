@@ -10,6 +10,7 @@ services:
       dockerfile: Dockerfile
     network_mode: "host"
     runtime: nvidia
+    shm_size: 6g
     volumes:
       - "./deepstream_python_apps:/opt/nvidia/deepstream/deepstream-6.3/sources/deepstream_python_apps"
       - "/tmp/.X11-unix:/tmp/.X11-unix:rw"
