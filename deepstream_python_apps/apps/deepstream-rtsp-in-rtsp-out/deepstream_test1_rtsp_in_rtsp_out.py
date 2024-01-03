@@ -629,6 +629,7 @@ def parse_args():
     print(f"Stream path is {stream_path}")
     stream_path = ['file:///opt/nvidia/deepstream/deepstream-6.3/samples/streams/sample_1080p_h264.mp4']
     stream_path = ['file:///opt/nvidia/deepstream/deepstream-6.3/sources/deepstream_python_apps/2.mp4']
+    stream_path = stream_path * 24
     return stream_path
 
 if __name__ == '__main__':
