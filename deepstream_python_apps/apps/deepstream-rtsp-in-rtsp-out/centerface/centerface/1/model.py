@@ -98,33 +98,25 @@ class TritonPythonModel:
         # logger.log_verbose("Verbose Msg!")
         for request in requests:
             input_tensor = pb_utils.get_input_tensor_by_name(request, "INPUT0")
-            # tf_tensor = from_dlpack(input_tensor.to_dlpack())
-            # # print("shape={}".format(tf_tensor.shape))
-            # frame = tf_tensor.numpy()
-            # frame = np.frombuffer(input_tensor.as_numpy().tobytes(), dtype=input_tensor.as_numpy_dtype())
             frame = input_tensor.as_numpy()
-            # frame = np.random.randint(0, 256, (1920, 1080, 3), dtype=np.uint8)
-
-            frame = np.squeeze(frame)
-            frame = np.transpose(frame,(1,2,0))
-            # print(frame[0, 1, 1, 1])
-            # print(f"new shape={frame.shape}")
-            threshold = cv2.threshold(frame[:,:,0],127,255,cv2.THRESH_BINARY)[1]
-            threshold = threshold.astype(np.uint8)
-            num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(threshold, connectivity=8)
-            # print(f"shape0={stats.shape[0]},shape1={stats.shape[1]}")
-            stats = stats.astype(np.float32)
-            number_of_items = int(stats.shape[0])
+            batch_size = frame.shape[0]
+            stats = np.array([
+                [10, 10, 200, 200, 3], 
+                [1700, 10, 200, 200, 3], 
+                [10, 860, 200, 200, 50], 
+                [1700, 860, 200, 200, 100]
+            ])
+            replicated_array = np.tile(stats, (batch_size, 1, 1))
+            stats = replicated_array.astype(np.float32)
+            number_of_items = 4
             # print(stats)
             # shape = np.array([number_of_items])
+
+            
+            stats = replicated_array.astype(np.float32)
             shape = np.array([number_of_items,5])
+            shape = np.tile(shape, (batch_size, 1, 1))
             shape = shape.astype(np.float32)
-            # print(shape.dtype)
-            # Iterate through the connected components and print their statistics
-            # for i in range(1, num_labels):
-            #     left, top, width, height, area = stats[i]
-                # print(f"shape={stats.shape}")
-                # print(f"Component {i} - Left: {left}, Top: {top}, Width: {width}, Height: {height}, Area: {area}")
             out_tensor_0 = pb_utils.Tensor(
                 "OUTPUT0", stats
             )
