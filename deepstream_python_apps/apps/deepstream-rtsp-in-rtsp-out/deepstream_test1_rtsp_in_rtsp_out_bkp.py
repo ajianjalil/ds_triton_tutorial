@@ -344,21 +344,6 @@ def cb_newpad(decodebin, decoder_src_pad, data):
             sys.stderr.write(
                 " Error: Decodebin did not pick nvidia decoder plugin.\n")
 
-def make_element(element_name, i):
-    """
-    Creates a Gstreamer element with unique name
-    Unique name is created by adding element type and index e.g. `element_name-i`
-    Unique name is essential for all the element in pipeline otherwise gstreamer will throw exception.
-    :param element_name: The name of the element to create
-    :param i: the index of the element in the pipeline
-    :return: A Gst.Element object
-    """
-    element = Gst.ElementFactory.make(element_name, element_name)
-    if not element:
-        sys.stderr.write(" Unable to create {0}".format(element_name))
-    element.set_property("name", "{0}-{1}".format(element_name, str(i)))
-    return element
-
 
 def decodebin_child_added(child_proxy, Object, name, user_data):
     print("Decodebin child added:", name, "\n")
@@ -458,12 +443,72 @@ def main(args):
         pgie = Gst.ElementFactory.make("nvinferserver", "primary-inference")
     if not pgie:
         sys.stderr.write(" Unable to create pgie \n")
-    
+    print("Creating tiler \n ")
+    tiler = Gst.ElementFactory.make("nvmultistreamtiler", "nvtiler")
+    if not tiler:
+        sys.stderr.write(" Unable to create tiler \n")
+    print("Creating nvvidconv \n ")
+    nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
+    if not nvvidconv:
+        sys.stderr.write(" Unable to create nvvidconv \n")
+    print("Creating nvosd \n ")
+    nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
+    if not nvosd:
+        sys.stderr.write(" Unable to create nvosd \n")
+    nvvidconv_postosd = Gst.ElementFactory.make(
+        "nvvideoconvert", "convertor_postosd")
+    if not nvvidconv_postosd:
+        sys.stderr.write(" Unable to create nvvidconv_postosd \n")
+
+    # Create a caps filter
+    caps = Gst.ElementFactory.make("capsfilter", "filter")
+    caps.set_property(
+        "caps", Gst.Caps.from_string("video/x-raw(memory:NVMM), format=I420")
+    )
+
+    # Make the encoder
+    if codec == "H264":
+        encoder = Gst.ElementFactory.make("nvv4l2h264enc", "encoder")
+        print("Creating H264 Encoder")
+    elif codec == "H265":
+        encoder = Gst.ElementFactory.make("nvv4l2h265enc", "encoder")
+        print("Creating H265 Encoder")
+    if not encoder:
+        sys.stderr.write(" Unable to create encoder")
+    encoder.set_property("bitrate", bitrate)
+    if is_aarch64():
+        encoder.set_property("preset-level", 1)
+        encoder.set_property("insert-sps-pps", 1)
+        #encoder.set_property("bufapi-version", 1)
+
+    # Make the payload-encode video into RTP packets
+    if codec == "H264":
+        rtppay = Gst.ElementFactory.make("rtph264pay", "rtppay")
+        print("Creating H264 rtppay")
+    elif codec == "H265":
+        rtppay = Gst.ElementFactory.make("rtph265pay", "rtppay")
+        print("Creating H265 rtppay")
+    if not rtppay:
+        sys.stderr.write(" Unable to create rtppay")
+
+    # Make the UDP sink
+    updsink_port_num = 5400
+    sink = Gst.ElementFactory.make("udpsink", "udpsink")
+    if not sink:
+        sys.stderr.write(" Unable to create udpsink")
+
+    sink.set_property("host", "224.224.255.255")
+    sink.set_property("port", updsink_port_num)
+    sink.set_property("async", False)
+    sink.set_property("sync", 1)
+
     streammux.set_property("width", 1920)
     streammux.set_property("height", 1080)
     streammux.set_property("batch-size", number_sources)
     streammux.set_property("batched-push-timeout", 4000000)
     
+    if ts_from_rtsp:
+        streammux.set_property("attach-sys-ts", 0)
 
     if gie=="nvinfer":
         pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
@@ -482,111 +527,34 @@ def main(args):
         )
         pgie.set_property("batch-size", number_sources)
 
-    ## Adding the other code
-    print("Creating Queue")
-    queue_before_demux = Gst.ElementFactory.make("queue","queue_before_demux")
+    print("Adding elements to Pipeline \n")
+    tiler_rows = int(math.sqrt(number_sources))
+    tiler_columns = int(math.ceil((1.0 * number_sources) / tiler_rows))
+    tiler.set_property("rows", tiler_rows)
+    tiler.set_property("columns", tiler_columns)
+    tiler.set_property("width", TILED_OUTPUT_WIDTH)
+    tiler.set_property("height", TILED_OUTPUT_HEIGHT)
+    sink.set_property("qos", 0)
 
-    print("Creating nvStreamDemux")
-    nvstreamdemux = Gst.ElementFactory.make("nvstreamdemux","nvstreamdemux")
-    if not nvstreamdemux:
-        print("Unable to create nvstreamdemux")
-
-    pipeline.add(queue_before_demux)
     pipeline.add(pgie)
-    pipeline.add(nvstreamdemux)
+    pipeline.add(tiler)
+    pipeline.add(nvvidconv)
+    pipeline.add(nvosd)
+    pipeline.add(nvvidconv_postosd)
+    pipeline.add(caps)
+    pipeline.add(encoder)
+    pipeline.add(rtppay)
+    pipeline.add(sink)
 
-    streammux.link(queue_before_demux)
-    queue_before_demux.link(pgie)
-    pgie.link(nvstreamdemux)
-
-    # fakesink = Gst.ElementFactory.make("fakesink","fakesink")
-    # pipeline.add(fakesink)
-    # nvstreamdemux.link(fakesink)
-
-    for i in range(number_sources):
-        # pipeline nvstreamdemux -> queue -> nvvidconv -> nvosd -> (if Jetson) nvegltransform -> nveglgl
-        # Creating EGLsink
-        # if is_aarch64():
-        #     print("Creating nv3dsink \n")
-        #     sink = make_element("nv3dsink", i)
-        #     if not sink:
-        #         sys.stderr.write(" Unable to create nv3dsink \n")
-        # else:
-        #     print("Creating EGLSink \n")
-        #     sink = make_element("nv3dsink", i)
-        #     if not sink:
-        #         sys.stderr.write(" Unable to create egl sink \n")
-        # pipeline.add(sink)
-
-        # creating queue
-        queue = make_element("queue", i)
-        pipeline.add(queue)
-
-        # creating nvvidconv
-        nvvideoconvert = make_element("nvvideoconvert", i)
-        pipeline.add(nvvideoconvert)
-
-        # creating nvosd
-        nvdsosd = make_element("nvdsosd", i)
-        pipeline.add(nvdsosd)
-        nvdsosd.set_property("process-mode", OSD_PROCESS_MODE)
-        nvdsosd.set_property("display-text", OSD_DISPLAY_TEXT)
-
-        # connect nvstreamdemux -> queue
-        padname = "src_%u" % i
-        demuxsrcpad = nvstreamdemux.get_request_pad(padname)
-        if not demuxsrcpad:
-            sys.stderr.write("Unable to create demux src pad \n")
-
-        queuesinkpad = queue.get_static_pad("sink")
-        if not queuesinkpad:
-            sys.stderr.write("Unable to create queue sink pad \n")
-        demuxsrcpad.link(queuesinkpad)
-
-
-        # connect  queue -> nvvidconv -> nvosd -> nveglgl
-        queue.link(nvvideoconvert)
-        nvvideoconvert.link(nvdsosd)
-
-
-        nvvidconv_postosd = Gst.ElementFactory.make(
-            "nvvideoconvert", f"convertor_postosd{i}")
-        if not nvvidconv_postosd:
-            sys.stderr.write(" Unable to create nvvidconv_postosd \n")
-
-        # Create a caps filter
-        caps = Gst.ElementFactory.make("capsfilter", f"filter{i}")
-        caps.set_property(
-            "caps", Gst.Caps.from_string("video/x-raw(memory:NVMM), format=I420")
-        )
-
-        encoder = Gst.ElementFactory.make("nvv4l2h264enc", f"encoder{i}")
-        print("Creating H264 Encoder")
-
-        if not encoder:
-            sys.stderr.write(" Unable to create encoder")
-
-        if is_aarch64():
-            encoder.set_property("preset-level", 1)
-            encoder.set_property("insert-sps-pps", 1)
-            #encoder.set_property("bufapi-version", 1)
-
-        sink = Gst.ElementFactory.make("rtspclientsink", f"rtspclientsink{i}")
-        if not sink:
-            sys.stderr.write(" Unable to create udpsink")
-        sink.set_property("location",f"rtsp://127.0.0.1:554/video{i}")
-        sink.set_property("protocols","tcp")
-        print(f"will stream in rtsp://127.0.0.1:554/video{i}")
-        pipeline.add(nvvidconv_postosd)
-        pipeline.add(caps)
-        pipeline.add(encoder)
-        pipeline.add(sink)
-        nvdsosd.link(nvvidconv_postosd)
-        nvvidconv_postosd.link(caps)
-        caps.link(encoder)
-        encoder.link(sink)
-
-
+    streammux.link(pgie)
+    pgie.link(nvvidconv)
+    nvvidconv.link(tiler)
+    tiler.link(nvosd)
+    nvosd.link(nvvidconv_postosd)
+    nvvidconv_postosd.link(caps)
+    caps.link(encoder)
+    encoder.link(rtppay)
+    rtppay.link(sink)
 
     # create an event loop and feed gstreamer bus mesages to it
     loop = GLib.MainLoop()
@@ -600,6 +568,25 @@ def main(args):
     else:
         pgie_src_pad.add_probe(Gst.PadProbeType.BUFFER, pgie_src_pad_buffer_probe, 0)
 
+    # Start streaming
+    rtsp_port_num = 8554
+
+    server = GstRtspServer.RTSPServer.new()
+    server.props.service = "%d" % rtsp_port_num
+    server.attach(None)
+
+    factory = GstRtspServer.RTSPMediaFactory.new()
+    factory.set_launch(
+        '( udpsrc name=pay0 port=%d buffer-size=524288 caps="application/x-rtp, media=video, clock-rate=90000, encoding-name=(string)%s, payload=96 " )'
+        % (updsink_port_num, codec)
+    )
+    factory.set_shared(True)
+    server.get_mount_points().add_factory("/ds-test", factory)
+
+    print(
+        "\n *** DeepStream: Launched RTSP Streaming at rtsp://localhost:%d/ds-test ***\n\n"
+        % rtsp_port_num
+    )
 
     # start play back and listen to events
     print("Starting pipeline \n")
@@ -642,8 +629,7 @@ def parse_args():
     print(f"Stream path is {stream_path}")
     stream_path = ['file:///opt/nvidia/deepstream/deepstream-6.3/samples/streams/sample_1080p_h264.mp4']
     stream_path = ['file:///opt/nvidia/deepstream/deepstream-6.3/sources/deepstream_python_apps/2.mp4']
-    stream_path = stream_path * 12
-
+    stream_path = stream_path * 27
     # stream_path = stream_path + ['rtsp://192.168.8.33:8555/video1']
     return stream_path
 

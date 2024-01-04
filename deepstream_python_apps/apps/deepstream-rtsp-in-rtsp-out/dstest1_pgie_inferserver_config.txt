@@ -65,7 +65,7 @@ infer_config {
 }
 input_control {
   process_mode: PROCESS_MODE_FULL_FRAME
-  interval: 60
+  interval: 0
 }
 
 output_control {
