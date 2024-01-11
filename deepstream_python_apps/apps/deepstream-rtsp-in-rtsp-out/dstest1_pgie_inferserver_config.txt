@@ -29,7 +29,7 @@ infer_config {
       }
     ]
     trt_is {
-      model_name: "centerface"
+      model_name: "ensemble_model"
       version: -1
       model_repo {
         root: "./centerface"
@@ -50,22 +50,10 @@ infer_config {
     }
   }
 
-  postprocess {
-    labelfile_path: "./centerface/centerface/centerface_labels.txt"
-    other{}
-  }
-
-  custom_lib {
-    path: "./centerface/customparser/libnvds_infercustomparser_centernet.so"
-  }
-
-  extra {
-    copy_input_to_host_buffers: false
-  }
 }
 input_control {
   process_mode: PROCESS_MODE_FULL_FRAME
-  interval: 0
+  interval: 1
 }
 
 output_control {
