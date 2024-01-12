@@ -24,9 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import io
-import json
-import cv2
+
 import numpy as np
 
 # triton_python_backend_utils is available in every Triton Python model. You
@@ -91,15 +89,28 @@ class TritonPythonModel:
         """
         responses = []
 
-        # logger = pb_utils.Logger
-        # logger.log_info("Info Msg!")
+        logger = pb_utils.Logger
+        # logger.log_error(f"Info Msg!:::::::::{test_module.value}")
         # logger.log_warn("Warning Msg!")
         # logger.log_error("Error Msg!")
         # logger.log_verbose("Verbose Msg!")
         for request in requests:
             input_tensor = pb_utils.get_input_tensor_by_name(request, "INPUT0")
+            frame = input_tensor.as_numpy()
             out_tensor = pb_utils.Tensor("OUTPUT0", input_tensor.as_numpy())
-            responses.append(pb_utils.InferenceResponse([out_tensor]))
+
+            stats = np.array([
+              [360, 780, 360, 360, -1]           # Middle rectangle
+          ])
+            batch_size = frame.shape[0]
+            replicated_array = np.tile(stats, (batch_size, 1, 1))
+            stats = replicated_array.astype(np.float32)
+
+            out_tensor_1 = pb_utils.Tensor(
+                "OUTPUT1", stats
+            )
+
+            responses.append(pb_utils.InferenceResponse([out_tensor,out_tensor_1]))
         return responses
 
     def finalize(self):

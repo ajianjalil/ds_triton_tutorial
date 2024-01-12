@@ -31,7 +31,13 @@ output [
     dims: [ 3,1080,1920 ]
   }
 ]
-
+output [
+  {
+    name: "OUTPUT1"
+    data_type: TYPE_FP32
+    dims: [ 1,5 ]
+  }
+]
 
 instance_group [
   {

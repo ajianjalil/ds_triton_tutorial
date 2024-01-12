@@ -53,6 +53,10 @@ ensemble_scheduling {
         key: "OUTPUT0"
         value: "output_0"
       }
+      output_map {
+        key: "OUTPUT1"
+        value: "output_1"
+      }
     },
     {
       model_name: "centerface2"
@@ -60,6 +64,10 @@ ensemble_scheduling {
       input_map {
         key: "INPUT0"
         value: "output_0"
+      }
+      input_map {
+        key: "INPUT1"
+        value: "output_1"
       }
       output_map {
         key: "OUTPUT0"

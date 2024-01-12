@@ -35,12 +35,30 @@ import numpy as np
 # and converting Triton input/output types to numpy types.
 import triton_python_backend_utils as pb_utils
 
+
+def convert(connected_components_output):
+    # Convert the connected components output to the specified format
+    # print(connected_components_output)
+    stats = np.array([
+        connected_components_output[:, 0] + 360,  # x
+        connected_components_output[:, 1] + 360,  # y
+        connected_components_output[:, 2],  # width
+        connected_components_output[:, 3],  # height
+    ]).T
+
+    # Add an extra column for the last value in the specified format
+    stats = np.column_stack((stats, np.zeros(stats.shape[0])))
+    return stats
+    # return connected_components_output
+
+
 class TritonPythonModel:
     """Your Python model must use the same class name. Every Python model
     that is created must have "TritonPythonModel" as the class name.
     """
 
-    # def initialize(self, args):
+    def initialize(self, args):
+        cv2.namedWindow("Video", cv2.WINDOW_NORMAL)
     #     """`initialize` is called only once when the model is being loaded.
     #     Implementing `initialize` function is optional. This function allows
     #     the model to initialize any state associated with this model.
@@ -68,6 +86,9 @@ class TritonPythonModel:
     #         output0_config["data_type"]
     #     )
 
+
+
+
     def execute(self, requests):
         """`execute` MUST be implemented in every Python model. `execute`
         function receives a list of pb_utils.InferenceRequest as the only
@@ -91,14 +112,20 @@ class TritonPythonModel:
         """
         responses = []
 
-        # logger = pb_utils.Logger
+        logger = pb_utils.Logger
         # logger.log_info("Info Msg!")
         # logger.log_warn("Warning Msg!")
         # logger.log_error("Error Msg!")
         # logger.log_verbose("Verbose Msg!")
         for request in requests:
             input_tensor = pb_utils.get_input_tensor_by_name(request, "INPUT0")
+            input_tensor1 = pb_utils.get_input_tensor_by_name(request, "INPUT1")
+            rect = input_tensor1.as_numpy()
+
+            logger.log_warn(f"{rect.shape}")
+            # print(rect)
             frame = input_tensor.as_numpy()
+            # logger.log_warn(f"{frame.shape}")
             batch_size = frame.shape[0]
             stats = np.array([
                 [10, 10, 200, 200, 3], 
@@ -106,22 +133,45 @@ class TritonPythonModel:
                 [10, 860, 200, 200, 50], 
                 [1700, 860, 200, 200, 100]
             ])
-            replicated_array = np.tile(stats, (batch_size, 1, 1))
-            stats = replicated_array.astype(np.float32)
-            number_of_items = 4
+            # replicated_array = np.tile(stats, (batch_size, 1, 1))
+            # stats = replicated_array.astype(np.float32)
+            # number_of_items = 4
             # print(stats)
             # shape = np.array([number_of_items])
-
             
-            stats = replicated_array.astype(np.float32)
+            # logger.log_warn(f"{frame.shape}")
+
+            # connocted components algorithm
+            roi = frame[0][:, 360:720,360:720]
+            roi_frame = cv2.cvtColor(roi[1,:,:], cv2.COLOR_GRAY2RGB)
+            
+            # logger.log_warn(f"{frame.shape}")
+            # logger.log_warn(f"{roi[1,:,:].shape}")
+            # logger.log_warn(f"{roi[0,0,0:2]}")
+            threshold = cv2.threshold(roi[0,:,:],127,255,cv2.THRESH_BINARY)[1]
+            threshold = threshold.astype(np.uint8)
+            cv2.imshow('Video', threshold)
+            cv2.waitKey(1)
+            num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(threshold, connectivity=8)
+            
+            stats = convert(stats)
+
+            number_of_items = stats.shape[0]
+            
+            stats = np.tile(stats, (batch_size, 1,1))
+            # logger.log_warn(f"{stats.shape}")
+            stats = stats.astype(np.float32)
             shape = np.array([number_of_items,5])
             shape = np.tile(shape, (batch_size, 1, 1))
+            # logger.log_warn(f"{stats.shape}")
+            # logger.log_warn(f"{stats[0]}")
+            # logger.log_warn(f"{shape.shape}")
             shape = shape.astype(np.float32)
             out_tensor_0 = pb_utils.Tensor(
-                "OUTPUT0", stats
+                "OUTPUT0", stats    # list of recatangles for each channels
             )
             out_tensor_1 = pb_utils.Tensor(
-                "OUTPUT1", shape
+                "OUTPUT1", shape   # list of shapes of recatangles for each channels
             )
             responses.append(pb_utils.InferenceResponse([out_tensor_0,out_tensor_1]))
         return responses

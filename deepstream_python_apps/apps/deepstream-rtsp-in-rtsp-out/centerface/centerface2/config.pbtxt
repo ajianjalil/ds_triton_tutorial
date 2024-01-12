@@ -24,6 +24,14 @@ input [
   }
 ]
 
+input [
+  {
+    name: "INPUT1"
+    data_type: TYPE_FP32
+    dims: [ 1,5 ]
+  }
+]
+
 output [
   {
     name: "OUTPUT0"
