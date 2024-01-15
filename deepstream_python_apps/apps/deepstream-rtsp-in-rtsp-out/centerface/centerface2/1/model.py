@@ -36,12 +36,12 @@ import numpy as np
 import triton_python_backend_utils as pb_utils
 
 
-def convert(connected_components_output):
+def convert(connected_components_output,x,y):
     # Convert the connected components output to the specified format
     # print(connected_components_output)
     stats = np.array([
-        connected_components_output[:, 0] + 360,  # x
-        connected_components_output[:, 1] + 360,  # y
+        connected_components_output[:, 0] + x,  # x
+        connected_components_output[:, 1] + y,  # y
         connected_components_output[:, 2],  # width
         connected_components_output[:, 3],  # height
     ]).T
@@ -122,6 +122,7 @@ class TritonPythonModel:
             input_tensor1 = pb_utils.get_input_tensor_by_name(request, "INPUT1")
             rect = input_tensor1.as_numpy()
 
+            
             logger.log_warn(f"{rect.shape}")
             # print(rect)
             frame = input_tensor.as_numpy()
@@ -142,19 +143,26 @@ class TritonPythonModel:
             # logger.log_warn(f"{frame.shape}")
 
             # connocted components algorithm
-            roi = frame[0][:, 360:720,360:720]
-            roi_frame = cv2.cvtColor(roi[1,:,:], cv2.COLOR_GRAY2RGB)
-            
+            x = int(rect[0][0][0])
+            y = int(rect[0][0][1])
+            logger.log_warn(f"VALUES::{x,y}")
+            roi = frame[0][:, x:x+500,y:y+500]
+            try:
+                roi_frame = cv2.cvtColor(roi[1,:,:], cv2.COLOR_GRAY2RGB)
+                threshold = cv2.threshold(roi[0,:,:],127,255,cv2.THRESH_BINARY)[1]
+                threshold = threshold.astype(np.uint8)
+                cv2.imshow('Video', threshold)
+                cv2.waitKey(1)
+                num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(threshold, connectivity=8)
+
+            except:
+                logger.log_warn(f"exception")
             # logger.log_warn(f"{frame.shape}")
             # logger.log_warn(f"{roi[1,:,:].shape}")
             # logger.log_warn(f"{roi[0,0,0:2]}")
-            threshold = cv2.threshold(roi[0,:,:],127,255,cv2.THRESH_BINARY)[1]
-            threshold = threshold.astype(np.uint8)
-            cv2.imshow('Video', threshold)
-            cv2.waitKey(1)
-            num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(threshold, connectivity=8)
+
             
-            stats = convert(stats)
+            stats = convert(stats,x,y)
 
             number_of_items = stats.shape[0]
             

@@ -24,7 +24,7 @@ services:
       - ROOT_DIR=/workspace/SP2023/
       # - GST_DEBUG=1
       # - GST_DEBUG_LEVEL=3
-    restart: always
+    # restart: always
     # command: ["deepstream_python_apps/apps/deepstream-demux-multi-in-multi-out/deepstream_demux_multi_in_multi_out.py","-i", "file:///opt/nvidia/deepstream/deepstream-5.1/workspace/1.mp4"]
     command: ["deepstream_test1_rtsp_in_rtsp_out.py", "-i",
      "file:///opt/nvidia/deepstream/deepstream-6.3/samples/streams/sample_1080p_h264.mp4",

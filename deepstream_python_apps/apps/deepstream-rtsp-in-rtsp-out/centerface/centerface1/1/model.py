@@ -25,6 +25,25 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import numpy as np
+import cv2
+
+
+class MEM:
+    def __init__(self):
+      self.Counter=1
+      self.IM=np.zeros((3,200,200))
+
+    def ADD(self):
+        self.Counter=self.Counter+1
+    def Set(self,IM):
+        self.IM=np.maximum(IM,self.IM)-10
+        self.IM=np.clip(self.IM,0,255)
+        IM2=np.zeros((200,200,3))
+        IM2[:,:,0]=self.IM[2,:,:]
+        IM2[:,:,1]=self.IM[1,:,:]
+        IM2[:,:,2]=self.IM[0,:,:]
+        cv2.imshow('A',IM2.astype('uint8'))
+        cv2.waitKey(3)
 
 # triton_python_backend_utils is available in every Triton Python model. You
 # need to use this module to create inference requests and responses. It also
@@ -64,7 +83,9 @@ class TritonPythonModel:
     #     self.output0_dtype = pb_utils.triton_string_to_numpy(
     #         output0_config["data_type"]
     #     )
-
+ 
+    def initialize(self, args):
+      self.MEM1=MEM()
     def execute(self, requests):
         """`execute` MUST be implemented in every Python model. `execute`
         function receives a list of pb_utils.InferenceRequest as the only
@@ -101,13 +122,44 @@ class TritonPythonModel:
             stats = np.array([
               [360, 780, 360, 360, -1]           # Middle rectangle
           ])
+            Brightest=np.sum(frame[0,:,:,:],axis=0)
+            X,Y=np.where(Brightest==np.max(Brightest))
+            X=X[0]
+            Y=Y[0]
+            X=np.clip(X,100,frame.shape[2]-100)
+            Y=np.clip(Y,100,frame.shape[3]-100)
+            # logger.log_warn(f"Warning Msg:{(X,Y)}")
+            # logger.log_warn(f"shape{frame.shape}")
+
+            stats1 = np.array(
+              [Y-100, X-100, 500, 500, -1]   )        # Middle rectangl
+
+            Brightest=np.sum(frame[1,:,:,:],axis=2)
+            X1,Y1=np.where(Brightest==np.max(Brightest))
+            X1=X1[0]
+            Y1=Y1[0]
+
+            X1=np.clip(X1,100,frame.shape[2]-100)
+            Y1=np.clip(Y1,100,frame.shape[3]-100)
+
+            stats2 = np.array(
+              [Y1-100, X1-100, 500, 500, -1] )          # Middle rectangl
+
+
             batch_size = frame.shape[0]
             replicated_array = np.tile(stats, (batch_size, 1, 1))
+
+            #replicated_array=np.array([stats1,stats2])
+            replicated_array=np.array([stats1])
+            replicated_array = np.tile(replicated_array, (batch_size, 1, 1))
+
+            logger.log_warn(f"Warning Msg:{replicated_array.shape}")
             stats = replicated_array.astype(np.float32)
 
             out_tensor_1 = pb_utils.Tensor(
                 "OUTPUT1", stats
             )
+            self.MEM1.Set(frame[0,:,:200,:200])
 
             responses.append(pb_utils.InferenceResponse([out_tensor,out_tensor_1]))
         return responses

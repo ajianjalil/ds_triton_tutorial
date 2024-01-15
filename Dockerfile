@@ -29,4 +29,6 @@ RUN apt-get install -y libgirepository1.0-dev \
     python3-numpy python3-opencv
 
 RUN python3 -m pip install pyds_ext
+RUN python3 -m pip install cupy==12.3.0
+
 WORKDIR /opt/nvidia/deepstream/deepstream-6.3/sources/deepstream_python_apps/apps/deepstream-rtsp-in-rtsp-out/
