@@ -42,13 +42,13 @@ output [
 instance_group [
   {
     count: 1
-    kind : KIND_CPU
+    kind : KIND_GPU
   }
 ]
 
 parameters: {
   key: "FORCE_CPU_ONLY_INPUT_TENSORS"
   value: {
-    string_value:"yes"
+    string_value:"no"
   }
 }

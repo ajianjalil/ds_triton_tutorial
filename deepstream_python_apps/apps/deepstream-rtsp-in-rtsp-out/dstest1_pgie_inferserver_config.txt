@@ -36,6 +36,10 @@ infer_config {
         log_level: 1
         tf_gpu_memory_fraction: 0.2
         tf_disable_soft_placement: 0
+        cuda_device_memory: [ {
+          device: 0
+          memory_pool_byte_size: 2000000000
+        } ]
       }
     }
   }
@@ -59,3 +63,6 @@ input_control {
 output_control {
   output_tensor_meta: true
 }
+
+	
+

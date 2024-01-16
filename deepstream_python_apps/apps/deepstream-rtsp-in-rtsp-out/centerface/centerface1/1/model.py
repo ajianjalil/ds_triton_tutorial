@@ -26,6 +26,7 @@
 
 import numpy as np
 import cv2
+import cupy as cp
 
 
 class MEM:
@@ -115,9 +116,15 @@ class TritonPythonModel:
         # logger.log_error("Error Msg!")
         # logger.log_verbose("Verbose Msg!")
         for request in requests:
+            
             input_tensor = pb_utils.get_input_tensor_by_name(request, "INPUT0")
-            frame = input_tensor.as_numpy()
-            out_tensor = pb_utils.Tensor("OUTPUT0", input_tensor.as_numpy())
+            frame_cp = cp.fromDlpack(input_tensor.to_dlpack())
+            logger.log_warn(f"Warning Msg!{frame_cp.device}")
+            # frame = input_tensor.as_numpy()
+            frame = cp.asnumpy(frame_cp)
+            out_tensor = pb_utils.Tensor.from_dlpack(
+                "OUTPUT0", input_tensor.to_dlpack()
+            )
 
             stats = np.array([
               [360, 780, 360, 360, -1]           # Middle rectangle
@@ -159,7 +166,7 @@ class TritonPythonModel:
             out_tensor_1 = pb_utils.Tensor(
                 "OUTPUT1", stats
             )
-            self.MEM1.Set(frame[0,:,:200,:200])
+            # self.MEM1.Set(frame[0,:,:200,:200])
 
             responses.append(pb_utils.InferenceResponse([out_tensor,out_tensor_1]))
         return responses
