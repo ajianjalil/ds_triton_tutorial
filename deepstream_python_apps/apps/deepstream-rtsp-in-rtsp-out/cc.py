@@ -1,71 +1,38 @@
-import cupy as cp
+import cv2
 import numpy as np
+import time
 
-BLOCK_SIZE_X=32
-BLOCK_SIZE_Y=4
+# Create two matrices on the GPU
+rows, cols = 1000, 1000
+mat1 = cv2.cuda_GpuMat(rows, cols, cv2.CV_32F)
+mat2 = cv2.cuda_GpuMat(rows, cols, cv2.CV_32F)
 
-# Define the CuPy kernel functions
-def init_labels_kernel(g_labels, g_image, numCols, numRows):
-    grid = (numCols + BLOCK_SIZE_X - 1) // BLOCK_SIZE_X, (numRows + BLOCK_SIZE_Y - 1) // BLOCK_SIZE_Y
-    block = (BLOCK_SIZE_X, BLOCK_SIZE_Y)
+# Generate random data on the CPU and upload it to the GPU
+mat1_cpu = np.random.randn(rows, cols).astype(np.float32)
+mat2_cpu = np.random.randn(rows, cols).astype(np.float32)
 
-    # CuPy equivalent kernel launch
-    init_labels_kernel_kernel(grid, block, (g_labels, g_image, numCols, numRows))
+mat1.upload(mat1_cpu)
+mat2.upload(mat2_cpu)
 
-def resolve_labels_kernel(g_labels, numCols, numRows):
-    grid = (numCols + BLOCK_SIZE_X - 1) // BLOCK_SIZE_X, (numRows + BLOCK_SIZE_Y - 1) // BLOCK_SIZE_Y
-    block = (BLOCK_SIZE_X, BLOCK_SIZE_Y)
+# Create a destination matrix on the GPU
+dst = cv2.cuda_GpuMat(rows, cols, cv2.CV_32F)
 
-    # CuPy equivalent kernel launch
-    resolve_labels_kernel_kernel(grid, block, (g_labels, numCols, numRows))
+# Measure time for GPU matrix addition
+start_time = time.time()
+cv2.cuda.add(mat1, mat2, dst)
+gpu_time = time.time() - start_time
 
-def label_reduction_kernel(g_labels, g_image, numCols, numRows):
-    grid = (numCols + BLOCK_SIZE_X - 1) // BLOCK_SIZE_X, (numRows + BLOCK_SIZE_Y - 1) // BLOCK_SIZE_Y
-    block = (BLOCK_SIZE_X, BLOCK_SIZE_Y)
+# Download the result matrix from GPU to CPU
+result_cpu = dst.download()
 
-    # CuPy equivalent kernel launch
-    label_reduction_kernel_kernel(grid, block, (g_labels, g_image, numCols, numRows))
+# Perform the same matrix addition on the CPU for comparison
+result_cpu_reference = cv2.add(mat1_cpu, mat2_cpu)
 
-def resolve_background_kernel(g_labels, g_image, numCols, numRows):
-    grid = (numCols + BLOCK_SIZE_X - 1) // BLOCK_SIZE_X, (numRows + BLOCK_SIZE_Y - 1) // BLOCK_SIZE_Y
-    block = (BLOCK_SIZE_X, BLOCK_SIZE_Y)
+# Compare the results
+print("GPU Time:", gpu_time)
 
-    # CuPy equivalent kernel launch
-    resolve_background_kernel_kernel(grid, block, (g_labels, g_image, numCols, numRows))
-
-# Convert the C++ connectedComponentLabeling function to a Python function using CuPy
-def connectedComponentLabeling(outputImg, inputImg, numCols, numRows):
-    # Create CuPy arrays from the input data
-    g_labels = cp.array(outputImg)
-    g_image = cp.array(inputImg)
-
-    # Initialise labels
-    init_labels_kernel(g_labels, g_image, numCols, numRows)
-
-    # Analysis
-    resolve_labels_kernel(g_labels, numCols, numRows)
-
-    # Label Reduction
-    label_reduction_kernel(g_labels, g_image, numCols, numRows)
-
-    # Analysis
-    resolve_labels_kernel(g_labels, numCols, numRows)
-
-    # Force background to have label zero
-    resolve_background_kernel(g_labels, g_image, numCols, numRows)
-
-    # Copy the result back to the output array
-    cp.copyto(outputImg, g_labels)
-
-# The rest of your Python code remains mostly unchanged
-# ...
-
-# Example usage
-image = np.array([[0, 1, 1],
-                  [0, 0, 1],
-                  [1, 1, 0]])
-
-output_labels = np.zeros_like(image, dtype=np.uint32)
-
-connectedComponentLabeling(output_labels, image, image.shape[1], image.shape[0])
-print("Connected Components Labels:", output_labels)
+# Check if the GPU result matches the CPU result
+if np.allclose(result_cpu, result_cpu_reference):
+    print("Results Match!")
+else:
+    print("Results Do Not Match!")
