@@ -20,7 +20,7 @@ input [
   {
     name: "INPUT0"
     data_type: TYPE_FP32
-    dims: [ 3,1080,1920 ]
+    dims: [1080,1920,3 ]
   }
 ]
 

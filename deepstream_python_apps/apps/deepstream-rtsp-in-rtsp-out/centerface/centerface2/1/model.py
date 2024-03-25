@@ -147,16 +147,16 @@ class TritonPythonModel:
             y = int(rect[0][0][1])
             logger.log_warn(f"VALUES::{x,y}")
             roi = frame[0][:, x:x+500,y:y+500]
-            try:
-                roi_frame = cv2.cvtColor(roi[1,:,:], cv2.COLOR_GRAY2RGB)
-                threshold = cv2.threshold(roi[0,:,:],127,255,cv2.THRESH_BINARY)[1]
-                threshold = threshold.astype(np.uint8)
-                cv2.imshow('Video', threshold)
-                cv2.waitKey(1)
-                num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(threshold, connectivity=8)
+            # try:
+            #     roi_frame = cv2.cvtColor(roi[1,:,:], cv2.COLOR_GRAY2RGB)
+            #     threshold = cv2.threshold(roi[0,:,:],127,255,cv2.THRESH_BINARY)[1]
+            #     threshold = threshold.astype(np.uint8)
+            #     cv2.imshow('Video', threshold)
+            #     cv2.waitKey(1)
+            #     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(threshold, connectivity=8)
 
-            except:
-                logger.log_warn(f"exception")
+            # except:
+            #     logger.log_warn(f"exception")
             # logger.log_warn(f"{frame.shape}")
             # logger.log_warn(f"{roi[1,:,:].shape}")
             # logger.log_warn(f"{roi[0,0,0:2]}")
